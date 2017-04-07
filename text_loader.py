@@ -10,6 +10,8 @@ import numpy as np
 class MinibatchLoader:
     def __init__(self):
         self.batch_pointers = [0, 0, 0]
+        self.batch_offset = [0, 0, 0]
+        self.split_size = [0, 0, 0]
         self.char_to_ix = {}
         self.ix_to_char = {}
         self.data = np.array([])
@@ -41,12 +43,16 @@ class MinibatchLoader:
 
         [ntrain, nvalid, _] = np.floor(batch_num * np.array(split_fractions))
         ntest = batch_num - ntrain - nvalid
-
-        self.batch_pointers = [0, ntrain, ntrain + nvalid]
+        self.split_size = [ntrain, nvalid, ntest]
+        print("split sizes:")
+        print(self.split_size)
+        self.batch_offset = [0, ntrain, ntrain + nvalid]
 
     def next_batch(self, split_index):
-        minibatch = self.data[self.batch_pointers[split_index], :, :]
+        minibatch = self.data[self.batch_pointers[split_index] + self.batch_offset[split_index], :, :]
         self.batch_pointers[split_index] += 1
+        if self.batch_pointers[split_index] == self.split_size[split_index]:
+            self.batch_pointers[split_index] = 0
         return minibatch
 
 
