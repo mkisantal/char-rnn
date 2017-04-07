@@ -1,6 +1,8 @@
 # training model
 
 import text_loader
+minibatch_loader = text_loader.MinibatchLoader()
 
-text_loader.load_text()
+
+minibatch_loader.load_text(([0.7, 0.15, 0.15]))
 print("done")
