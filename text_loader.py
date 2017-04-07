@@ -9,32 +9,45 @@ import numpy as np
 
 class MinibatchLoader:
     def __init__(self):
+        self.batch_pointers = [0, 0, 0]
+        self.char_to_ix = {}
+        self.ix_to_char = {}
+        self.data = np.array([])
         return
 
     def load_text(self, split_fractions=[0.8, 0.1, 0.1], batch_size=2):
         # load data
-        data = open('input.txt', 'r').read()
-        chars = list(set(data))
-        data_size, vocab_size = len(data), len(chars)
-        print('data has %d characters, %d unique.' % (data_size, vocab_size))
-        char_to_ix = {ch: i for i, ch in enumerate(chars)}
-        ix_to_char = {i: ch for i, ch in enumerate(chars)}
+        text = open('input.txt', 'r').read()
+        chars = list(set(text))
+        text_size, vocab_size = len(text), len(chars)
+        print('data has %d characters, %d unique.' % (text_size, vocab_size))
+        self.char_to_ix = {ch: i for i, ch in enumerate(chars)}
+        self.ix_to_char = {i: ch for i, ch in enumerate(chars)}
 
         # turning text to matrix of onehot vectors
-        x = np.zeros([vocab_size, 0], dtype='int')
-        for ch in data:
+        data = np.zeros([vocab_size, 0], dtype='int')
+        for ch in text:
             onehot = np.zeros([vocab_size, 1], dtype='int')
-            onehot[char_to_ix[ch]] = 1
-            x = np.column_stack((x, onehot))
+            onehot[self.char_to_ix[ch]] = 1
+            data = np.column_stack((data, onehot))
 
-        x = x[:, :x.shape[1] - x.shape[1] % batch_size]  # remove extra-batch character
-        x = np.reshape(x, (vocab_size, batch_size, -1))
+        print(data)
+        batch_num = data.shape[1] // batch_size
+        data = data[:, :(batch_num * batch_size)]  # remove extra-batch character
+        data = np.swapaxes(data, 0, 1)
+        data = np.reshape(data, (batch_num, -1, vocab_size))
+        data = np.swapaxes(data, 1, 2)
+        self.data = data
 
-        [ntrain, nvalid, _] = np.floor(data_size * np.array(split_fractions))
-        ntest = data_size - ntrain - nvalid
+        [ntrain, nvalid, _] = np.floor(batch_num * np.array(split_fractions))
+        ntest = batch_num - ntrain - nvalid
 
-        print(x)
-        #print(ntrain, nvalid, ntest)
+        self.batch_pointers = [0, ntrain, ntrain + nvalid]
+
+    def next_batch(self, split_index):
+        minibatch = self.data[self.batch_pointers[split_index], :, :]
+        self.batch_pointers[split_index] += 1
+        return minibatch
 
 
 
