@@ -55,6 +55,9 @@ class MinibatchLoader:
             self.batch_pointers[split_index] = 0
         return minibatch
 
+    def reset_pointer(self, split_index):
+        self.batch_pointers[split_index] = 0
+
 
 
 
