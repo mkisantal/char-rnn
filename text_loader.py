@@ -14,7 +14,8 @@ class MinibatchLoader:
         self.split_size = [0, 0, 0]
         self.char_to_ix = {}
         self.ix_to_char = {}
-        self.data = np.array([])
+        self.x = np.array([])
+        self.y = np.array([])
         return
 
     def load_text(self, split_fractions=[0.8, 0.1, 0.1], batch_size=2):
@@ -33,14 +34,27 @@ class MinibatchLoader:
             onehot[self.char_to_ix[ch]] = 1
             data = np.column_stack((data, onehot))
 
-        print(data)
-        batch_num = data.shape[1] // batch_size
-        data = data[:, :(batch_num * batch_size)]  # remove extra-batch character
-        data = np.swapaxes(data, 0, 1)
-        data = np.reshape(data, (batch_num, -1, vocab_size))
-        data = np.swapaxes(data, 1, 2)
-        self.data = data
+        # setting inputs and targets
+        x = np.copy(data[:, :-1])
+        y = np.copy(data[:, 1:])
 
+        # dividing data to mini-batches
+        batch_num = x.shape[1] // batch_size
+        for z in (x, y):
+            z = z[:, :(batch_num * batch_size)]
+            z = np.swapaxes(z, 0, 1)
+            z = np.reshape(z, (batch_num, -1, vocab_size))
+            z = np.swapaxes(z, 1, 2)
+            if np.size(self.x) is 0:
+                self.x = z
+            else:
+                self.y = z
+        print("x")
+        print(self.x)
+        print("----- y --------")
+        print(self.y)
+
+        # split to data to train/val/test sets
         [ntrain, nvalid, _] = np.floor(batch_num * np.array(split_fractions))
         ntest = batch_num - ntrain - nvalid
         self.split_size = [ntrain, nvalid, ntest]
@@ -49,11 +63,12 @@ class MinibatchLoader:
         self.batch_offset = [0, ntrain, ntrain + nvalid]
 
     def next_batch(self, split_index):
-        minibatch = self.data[self.batch_pointers[split_index] + self.batch_offset[split_index], :, :]
+        minibatch_x = self.x[self.batch_pointers[split_index] + self.batch_offset[split_index], :, :]
+        minibatch_y = self.y[self.batch_pointers[split_index] + self.batch_offset[split_index], :, :]
         self.batch_pointers[split_index] += 1
         if self.batch_pointers[split_index] == self.split_size[split_index]:
             self.batch_pointers[split_index] = 0
-        return minibatch
+        return minibatch_x, minibatch_y
 
     def reset_pointer(self, split_index):
         self.batch_pointers[split_index] = 0
